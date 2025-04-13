@@ -113,9 +113,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     // Precisionスイッチ処理
     #ifdef PRECISION_ENABLE
-    case PRC_SW:  
-        precision_switch(record->event.pressed); 
-        return false;
+    switch (keycode) {
+        case PRC_SW:  
+            precision_switch(record->event.pressed); 
+            return false;
+    }
     #endif
 
     return true;
