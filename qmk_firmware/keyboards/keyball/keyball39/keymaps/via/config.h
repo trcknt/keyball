@@ -46,3 +46,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POINTING_DEVICE_AUTO_MOUSE_ENABLE
 #define AUTO_MOUSE_DEFAULT_LAYER 5
 #define AUTO_MOUSE_TIME 800 // マウスが止まってから元のレイヤーに戻るまでの時間(ms)
+
+#define PRECISION_ENABLE // 有効化
+#define PRECISION_CPI 3  // 下げた時のCPI (1/100の値を指定。左記ならCPI 300)
