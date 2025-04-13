@@ -17,30 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include QMK_KEYBOARD_H
-
 #include "quantum.h"
 
 #ifdef PRECISION_ENABLE
   #include "precision.c"
 #endif
 
+// Enum定義: Precision モードスイッチ
 enum my_keyball_keycodes {
     PRC_SW = KEYBALL_SAFE_RANGE, // Precision モードスイッチ   
 };
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        #ifdef PRECISION_ENABLE
-          case PRC_SW:  precision_switch(record->event.pressed); return false;
-        #endif
-        default: break;
-    }
-    return true;
-}
-
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  // keymap for default (VIA)
   [0] = LAYOUT_universal(
     KC_Q     , KC_W     , KC_E     , KC_R     , KC_T     ,                            KC_Y     , KC_U     , KC_I     , KC_O     , KC_P     ,
     KC_A     , KC_S     , KC_D     , KC_F     , KC_G     ,                            KC_H     , KC_J     , KC_K     , KC_L     , KC_MINS  ,
@@ -71,12 +60,21 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
-//マウスレイヤに関する設定
+// マウスレイヤに関する設定
+#define MOUSE_LAYER         6
+#define MOUSE_LAYER_TIMEOUT 800  // ミリ秒
+#define MOUSE_MOVE_THRESHOLD 4   // 動いたと見なす最小移動量
+
+static uint16_t mouse_layer_timer = 0;
+static bool mouse_layer_active = false;
+
+// レイヤ状態の更新
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // Auto enable scroll mode when the highest layer is 3
+    // レイヤが6の場合にスクロールモードを有効に
     keyball_set_scroll_mode(get_highest_layer(state) == 6);
     
     #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+        // レイヤ1, 2, 3, 4, 6 ではマウスレイヤを解除
         switch(get_highest_layer(remove_auto_mouse_layer(state, true))) {
             case 1:
             case 2:
@@ -94,19 +92,9 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     return state;
 }
 
-//マウスレイヤ解除の閾値等
-#include "timer.h"
-#include "pointing_device.h"
-
-#define MOUSE_LAYER         6
-#define MOUSE_LAYER_TIMEOUT 800  // ミリ秒
-#define MOUSE_MOVE_THRESHOLD 4   // 動いたと見なす最小移動量
-
-static uint16_t mouse_layer_timer = 0;
-static bool mouse_layer_active = false;
-
+// キー入力の処理
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    // 常にレイヤ0に戻すキーをチェック
+    // マウスボタンや修飾キーを押した場合はマウスレイヤを維持
     switch (keycode) {
         case KC_BTN1:
         case KC_BTN2:
@@ -116,18 +104,27 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_LCTL:
         case KC_LALT:
         case KC_LSFT:
-            // これらのキーではマウスレイヤ維持
-            return true;
+            return true;  // マウスレイヤにとどまる
         default:
             if (mouse_layer_active && record->event.pressed) {
-                layer_clear(); // レイヤ0に戻す
+                // 他のキーが押された場合、マウスレイヤを即座に終了
+                layer_clear();  // レイヤ0に戻す
                 mouse_layer_active = false;
             }
             break;
     }
+
+    // Precisionスイッチ処理
+    #ifdef PRECISION_ENABLE
+        case PRC_SW:  
+            precision_switch(record->event.pressed); 
+            return false;
+    #endif
+
     return true;
 }
 
+// トラッキング中の処理
 void pointing_device_task_user(report_mouse_t mouse_report) {
     if (mouse_layer_active) {
         // 動きがしきい値を超えていたら操作中とみなしてタイマーリセット
@@ -146,19 +143,17 @@ void pointing_device_task_user(report_mouse_t mouse_report) {
     }
 }
 
-// 任意のタイミングでこの関数を使ってマウスレイヤに入る
+// マウスレイヤに入るための関数
 void enter_mouse_layer(void) {
-    layer_on(MOUSE_LAYER);
-    mouse_layer_timer = timer_read();
-    mouse_layer_active = true;
+    layer_on(MOUSE_LAYER);  // マウスレイヤを有効化
+    mouse_layer_timer = timer_read();  // タイマーをリセット
+    mouse_layer_active = true;  // マウスレイヤをアクティブに
 }
 
-
-
 #ifdef OLED_ENABLE
-
 #    include "lib/oledkit/oledkit.h"
 
+// OLED表示の更新
 void oledkit_render_info_user(void) {
     keyball_oled_render_keyinfo();
     keyball_oled_render_ballinfo();
