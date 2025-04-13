@@ -71,6 +71,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
+//マウスレイヤに関する設定
 layer_state_t layer_state_set_user(layer_state_t state) {
     // Auto enable scroll mode when the highest layer is 3
     keyball_set_scroll_mode(get_highest_layer(state) == 6);
@@ -92,6 +93,67 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     #endif
     return state;
 }
+
+//マウスレイヤ解除の閾値等
+#include "timer.h"
+#include "pointing_device.h"
+
+#define MOUSE_LAYER         6
+#define MOUSE_LAYER_TIMEOUT 800  // ミリ秒
+#define MOUSE_MOVE_THRESHOLD 4   // 動いたと見なす最小移動量
+
+static uint16_t mouse_layer_timer = 0;
+static bool mouse_layer_active = false;
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    // 常にレイヤ0に戻すキーをチェック
+    switch (keycode) {
+        case KC_BTN1:
+        case KC_BTN2:
+        case KC_BTN3:
+        case KC_BTN4:
+        case KC_BTN5:
+        case KC_LCTL:
+        case KC_LALT:
+        case KC_LSFT:
+            // これらのキーではマウスレイヤ維持
+            return true;
+        default:
+            if (mouse_layer_active && record->event.pressed) {
+                layer_clear(); // レイヤ0に戻す
+                mouse_layer_active = false;
+            }
+            break;
+    }
+    return true;
+}
+
+void pointing_device_task_user(report_mouse_t mouse_report) {
+    if (mouse_layer_active) {
+        // 動きがしきい値を超えていたら操作中とみなしてタイマーリセット
+        if (abs(mouse_report.x) >= MOUSE_MOVE_THRESHOLD ||
+            abs(mouse_report.y) >= MOUSE_MOVE_THRESHOLD ||
+            abs(mouse_report.h) >= MOUSE_MOVE_THRESHOLD ||
+            abs(mouse_report.v) >= MOUSE_MOVE_THRESHOLD) {
+            mouse_layer_timer = timer_read();
+        }
+
+        // しきい値以下で時間経過したら戻す
+        if (timer_elapsed(mouse_layer_timer) > MOUSE_LAYER_TIMEOUT) {
+            layer_clear();
+            mouse_layer_active = false;
+        }
+    }
+}
+
+// 任意のタイミングでこの関数を使ってマウスレイヤに入る
+void enter_mouse_layer(void) {
+    layer_on(MOUSE_LAYER);
+    mouse_layer_timer = timer_read();
+    mouse_layer_active = true;
+}
+
+
 
 #ifdef OLED_ENABLE
 
