@@ -60,7 +60,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
-// マウスレイヤに関する設定
 #define MOUSE_LAYER         6
 #define MOUSE_LAYER_TIMEOUT 800  // ミリ秒
 #define MOUSE_MOVE_THRESHOLD 4   // 動いたと見なす最小移動量
@@ -70,11 +69,9 @@ static bool mouse_layer_active = false;
 
 // レイヤ状態の更新
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // レイヤが6の場合にスクロールモードを有効に
     keyball_set_scroll_mode(get_highest_layer(state) == 6);
-    
+
     #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-        // レイヤ1, 2, 3, 4, 6 ではマウスレイヤを解除
         switch(get_highest_layer(remove_auto_mouse_layer(state, true))) {
             case 1:
             case 2:
@@ -116,9 +113,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     // Precisionスイッチ処理
     #ifdef PRECISION_ENABLE
-        case PRC_SW:  
-            precision_switch(record->event.pressed); 
-            return false;
+    case PRC_SW:  
+        precision_switch(record->event.pressed); 
+        return false;
     #endif
 
     return true;
@@ -127,7 +124,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // トラッキング中の処理
 void pointing_device_task_user(report_mouse_t mouse_report) {
     if (mouse_layer_active) {
-        // 動きがしきい値を超えていたら操作中とみなしてタイマーリセット
         if (abs(mouse_report.x) >= MOUSE_MOVE_THRESHOLD ||
             abs(mouse_report.y) >= MOUSE_MOVE_THRESHOLD ||
             abs(mouse_report.h) >= MOUSE_MOVE_THRESHOLD ||
@@ -135,7 +131,6 @@ void pointing_device_task_user(report_mouse_t mouse_report) {
             mouse_layer_timer = timer_read();
         }
 
-        // しきい値以下で時間経過したら戻す
         if (timer_elapsed(mouse_layer_timer) > MOUSE_LAYER_TIMEOUT) {
             layer_clear();
             mouse_layer_active = false;
