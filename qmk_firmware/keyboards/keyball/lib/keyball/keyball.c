@@ -34,8 +34,8 @@ const uint16_t AML_TIMEOUT_MAX = 1000;
 const uint16_t AML_TIMEOUT_QU  = 50;   // Quantization Unit
 
 static const char BL = '\xB0'; // Blank indicator character
-static const char LFSTR_ON[] PROGMEM = "\xB2\xB3";
-static const char LFSTR_OFF[] PROGMEM = "\xB4\xB5";
+//static const char LFSTR_ON[] PROGMEM = "\xB2\xB3";
+//static const char LFSTR_OFF[] PROGMEM = "\xB4\xB5";
 
 keyball_t keyball = {
     .this_have_ball = false,
